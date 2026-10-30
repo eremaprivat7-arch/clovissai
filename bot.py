@@ -1,13 +1,12 @@
 # python, bot.py
 import asyncio
 import random
-import os
-import aiohttp
 import sqlite3
+import aiohttp
 from datetime import datetime
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command, CommandStart, BaseFilter
-from aiogram.types import FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -15,7 +14,6 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from config import BOT_TOKEN, ADMIN_IDS
 from ai_engine import generate_response
 from osint import check_username, check_phone
-from media import download_media
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
@@ -79,7 +77,7 @@ def add_to_history(chat_id, role, text):
 async def cmd_start(message: types.Message):
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🤖 ИИ", callback_data="menu_ai"), InlineKeyboardButton(text="🔍 OSINT", callback_data="menu_osint")],
-        [InlineKeyboardButton(text="📥 Скачать", callback_data="menu_dl"), InlineKeyboardButton(text="🎮 Игра", callback_data="menu_game")],
+        [InlineKeyboardButton(text="🎮 Игра", callback_data="menu_game")],
         [InlineKeyboardButton(text="📊 Стата", callback_data="menu_stats")]
     ])
     await message.reply("Здарова! Выбирай чё надо:", reply_markup=kb)
@@ -92,8 +90,6 @@ async def handle_menu(callback: types.CallbackQuery, state: FSMContext):
         await callback.message.answer("Напиши свой вопрос.")
     elif action == "osint":
         await callback.message.answer("Кидай ник или номер.")
-    elif action == "dl":
-        await callback.message.answer("Кидай ссылку.")
     elif action == "game":
         target = random.randint(1, 100)
         await state.update_data(target=target)
@@ -116,21 +112,6 @@ async def cmd_ai(message: types.Message):
     msg = await message.reply("Думаю...")
     ai_text = await generate_response(text, [])
     await msg.edit_text(ai_text)
-
-@dp.message(Command("dl"))
-async def cmd_dl(message: types.Message):
-    args = message.text.split()
-    if len(args) < 2:
-        await message.reply("Кинь ссылку.")
-        return
-    msg = await message.reply("Скачиваю...")
-    file_path = await download_media(args[1])
-    if file_path and os.path.exists(file_path):
-        await message.reply_video(FSInputFile(file_path), caption="Держи.")
-        os.remove(file_path)
-    else:
-        await message.reply("Не смог скачать.")
-    await msg.delete()
 
 @dp.message(Command("osint"))
 async def cmd_osint(message: types.Message):
