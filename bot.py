@@ -3,7 +3,10 @@ import asyncio
 import random
 import sqlite3
 import aiohttp
+import os
+import threading
 from datetime import datetime
+from flask import Flask
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command, CommandStart, BaseFilter
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -21,6 +24,17 @@ dp = Dispatcher(storage=MemoryStorage())
 BOT_TRIGGER = "grok"
 chat_histories = {}
 DB_PATH = "stats.db"
+
+# --- ФЕЙКОВЫЙ ВЕБ-СЕРВЕР ДЛЯ RENDER ---
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot is alive"
+
+def run_web():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
 
 # --- БАЗА ДАННЫХ ---
 def init_db():
@@ -259,6 +273,9 @@ async def handle_channel(post: types.Message):
         pass
 
 async def main():
+    # Запускаем Flask в фоне (для Render)
+    threading.Thread(target=run_web, daemon=True).start()
+    
     print(f"Мега-бот запущен! Триггер: '{BOT_TRIGGER}'")
     await dp.start_polling(bot)
 
